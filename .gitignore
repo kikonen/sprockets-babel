@@ -21,3 +21,5 @@ tmp
 *.a
 mkmf.log
 spec/rails4/log
+.idea
+*.iml

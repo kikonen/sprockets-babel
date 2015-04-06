@@ -1,9 +1,0 @@
-export class Greeter {
-  constructor(greeting) {
-    this.greeting = greeting;
-  }
-
-  greet(name) {
-    return `${this.greeting}, ${name}!`;
-  }
-}
