@@ -25,7 +25,8 @@ module ::Babel::Transpiler
       import_names.each_with_index { |item, i|
         next if i == 0
         next if item == 'exports' || item == 'module'
-        import_statements += 'var ' + import_vars[i - 1] + ' = ' + escape_module_id(item) + ';'
+        import_module_id = escape_module_id(resolve_relative_module_id(options[:moduleId], item))
+        import_statements += 'var ' + import_vars[i - 1] + ' = ' + import_module_id + ';'
       }
       'var exports = {}, module = {};' + "\n" + import_statements
     end
@@ -44,6 +45,26 @@ module ::Babel::Transpiler
         stripped + "\n" +
         'return (typeof module.exports === \'undefined\') ? exports : module.exports;' +
       '})();' + trailing_text
+  end
+
+  def self.resolve_relative_module_id(source_module_id, target_module_id)
+    target_path_parts = target_module_id.split(/\//)
+    basename = target_path_parts.pop
+    return target_module_id if target_path_parts.length == 0
+    return target_module_id if target_path_parts[0] != '.' && target_path_parts[0] != '..'
+    target_path_parts.shift if target_path_parts[0] == '.'
+
+    source_path_parts = source_module_id.split(/\//)
+    source_path_parts.pop
+    while target_path_parts.length > 0 && target_path_parts[0] == '..'
+      target_path_parts.pop
+      source_path_parts.pop if source_path_parts.length > 0
+    end
+    parts = source_path_parts.concat(target_path_parts)
+    if parts.length == 0
+      return basename
+    end
+    parts.join('/') + '/' + basename
   end
 
   def self.remove_use_strict(code)
