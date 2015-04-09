@@ -1,6 +1,7 @@
 require 'minitest/autorun'
 require 'sprockets'
 require 'sprockets/babel'
+require 'babel'
 
 class Environment
   def paths
@@ -16,11 +17,14 @@ end
 
 class TestES6 < MiniTest::Test
   def test_transform_arrow_function
-    es6 = File.read('test/fixtures/math.js.es6')
-    template = Sprockets::Babel::Template.new('math.js.es6', 1, {
-      modules: 'ignore',
-      sourceMaps: false
-    }) { es6 }
+    es6_source = File.read('test/fixtures/math.js.es6')
+
+    Babel.options do |o|
+      o[:modules] = 'ignore'
+      o[:sourceMaps] = false
+    end
+
+    template = Sprockets::Babel::Template.new('math.js.es6', 1) { es6_source }
     assert_equal <<-JS.chomp, template.render(Scope.new).strip
 "use strict";
 

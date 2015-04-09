@@ -1,4 +1,5 @@
 require 'babel/transpiler'
+require 'babel'
 require 'sprockets'
 require 'pathname'
 require 'erb'
@@ -100,7 +101,7 @@ module Sprockets
           sourceMaps: false, # due to slowness :(
           filename: file,
           filenameRelative: get_filename_relative(source_root)
-        }.merge(options))['code']
+        }.merge(options.merge(::Babel.options)))['code']
       end
 
       private
