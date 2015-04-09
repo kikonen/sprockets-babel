@@ -29,7 +29,7 @@ module ::Babel::Transpiler
         import_module_id = escape_module_id(resolve_relative_module_id(options[:moduleId], item))
         import_statements += 'var ' + import_vars[i - 1] + ' = ' + import_module_id + ';'
       }
-      'var exports = {}, module = {};' + "\n" + import_statements
+      "var exports = {}, module = {};\n" + import_statements
     end
 
     # deal with trailing stuff (such as source maps)
@@ -41,11 +41,11 @@ module ::Babel::Transpiler
       trailing_text = result[(index + 3)..-1]
     end
 
-    'var ' + escape_module_id(options[:moduleId]) + ' = (function() {' + "\n" +
+    'var ' + escape_module_id(options[:moduleId]) + " = (function() {\n" +
       "'use strict';\n" +
         stripped + "\n" +
         'return (typeof module.exports === \'undefined\') ? exports : module.exports;' +
-      '})();' + trailing_text
+      "})();\n" + trailing_text
   end
 
   def self.resolve_relative_module_id(source_module_id, target_module_id)
