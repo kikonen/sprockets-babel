@@ -4,79 +4,6 @@ require 'sprockets'
 require 'pathname'
 require 'erb'
 
-# Monkey patch babel-transpiler to support inline module formatting
-module ::Babel::Transpiler
-  def self.transform(code, options = {})
-    modules = options[:modules] || 'inline'
-    result = context.call('babel.transform', code, options.merge('ast' => false,
-        'modules' => modules == 'inline' ? 'amd' : modules))
-    if modules == 'inline'
-      result['code'] = transform_inline(result['code'], options)
-    end
-    result
-  end
-
-  def self.transform_inline(code, options)
-    result = remove_use_strict(code).gsub(/\Adefine\((.+?), function \(([^)]+)\) \{\n/m) do
-      raw_import_names = Regexp.last_match[1]
-      raw_import_vars = Regexp.last_match[2]
-      import_names = raw_import_names.gsub(/['"\[\]]/, '').split(', ')
-      import_vars = raw_import_vars.split(', ')
-      import_statements = ''
-      import_names.each_with_index { |item, i|
-        next if i == 0
-        next if item == 'exports' || item == 'module'
-        import_module_id = escape_module_id(resolve_relative_module_id(options[:moduleId], item))
-        import_statements += 'var ' + import_vars[i - 1] + ' = ' + import_module_id + ';'
-      }
-      "var exports = {}, module = {};\n" + import_statements
-    end
-
-    # deal with trailing stuff (such as source maps)
-    index = result.rindex(/\}\);/)
-    stripped = result
-    trailing_text = ''
-    unless index.nil?
-      stripped = result[0..index - 1]
-      trailing_text = result[(index + 3)..-1]
-    end
-
-    'var ' + escape_module_id(options[:moduleId]) + " = (function() {\n" +
-      "'use strict';\n" +
-        stripped + "\n" +
-        'return (typeof module.exports === \'undefined\') ? exports : module.exports;' +
-      "})();\n" + trailing_text
-  end
-
-  def self.resolve_relative_module_id(source_module_id, target_module_id)
-    target_path_parts = target_module_id.split(/\//)
-    basename = target_path_parts.pop
-    return target_module_id if target_path_parts.length == 0
-    return target_module_id if target_path_parts[0] != '.' && target_path_parts[0] != '..'
-    target_path_parts.shift if target_path_parts[0] == '.'
-
-    source_path_parts = source_module_id.split(/\//)
-    source_path_parts.pop
-    while target_path_parts.length > 0 && target_path_parts[0] == '..'
-      target_path_parts.pop
-      source_path_parts.pop if source_path_parts.length > 0
-    end
-    parts = source_path_parts.concat(target_path_parts)
-    if parts.length == 0
-      return basename
-    end
-    parts.join('/') + '/' + basename
-  end
-
-  def self.remove_use_strict(code)
-    code.gsub(/['"]use strict['"];\n/m, '')
-  end
-
-  def self.escape_module_id(module_id)
-    '$__' + ERB::Util.url_encode(module_id.gsub(/^\.\//, '')).gsub(/%/, '') + '__'
-  end
-end
-
 module Sprockets
   module Babel
     class Template < Tilt::Template
@@ -94,11 +21,10 @@ module Sprockets
 
       def evaluate(scope, locals, &block)
         source_root = get_source_root(scope)
-        ::Babel::Transpiler.transform(data, {
+        Babel.transform(data, {
           modules: 'inline',
           moduleIds: true,
           moduleId: get_module_name(source_root),
-          sourceMaps: false, # due to slowness :(
           filename: file,
           filenameRelative: get_filename_relative(source_root)
         }.merge(options.merge(::Babel.options)))['code']
@@ -129,6 +55,80 @@ module Sprockets
       def basename(file)
         file.gsub(/\.[^\/]+$/, '').gsub(/^\//, '')
       end
+    end
+
+    def self.transform(code, options = {})
+      modules = options[:modules] || 'inline'
+      result = ::Babel::Transpiler.context.call('babel.transform', code, options.merge(
+        'ast' => false,
+        'modules' => modules == 'inline' ? 'amd' : modules
+      ))
+      if modules == 'inline'
+        result['code'] = transform_inline(result['code'], options)
+      end
+      result
+    end
+
+    private
+
+    def self.transform_inline(code, options)
+      result = remove_use_strict(code).gsub(/\Adefine\((.+?), function \(([^)]+)\) \{\n/m) do
+        raw_import_names = Regexp.last_match[1]
+        raw_import_vars = Regexp.last_match[2]
+        import_names = raw_import_names.gsub(/['"\[\]]/, '').split(', ')
+        import_vars = raw_import_vars.split(', ')
+        import_statements = ''
+        import_names.each_with_index { |item, i|
+          next if i == 0
+          next if item == 'exports' || item == 'module'
+          import_module_id = escape_module_id(resolve_relative_module_id(options[:moduleId], item))
+          import_statements += 'var ' + import_vars[i - 1] + ' = ' + import_module_id + ';'
+        }
+        "var exports = {}, module = {};\n" + import_statements
+      end
+
+      # deal with trailing stuff (such as source maps)
+      index = result.rindex(/\}\);/)
+      stripped = result
+      trailing_text = ''
+      unless index.nil?
+        stripped = result[0..index - 1]
+        trailing_text = result[(index + 3)..-1]
+      end
+
+      'var ' + escape_module_id(options[:moduleId]) + " = (function() {\n" +
+        "'use strict';\n" +
+        stripped + "\n" +
+        'return (typeof module.exports === \'undefined\') ? exports : module.exports;' +
+        "})();\n" + trailing_text
+    end
+
+    def self.resolve_relative_module_id(source_module_id, target_module_id)
+      target_path_parts = target_module_id.split(/\//)
+      basename = target_path_parts.pop
+      return target_module_id if target_path_parts.length == 0
+      return target_module_id if target_path_parts[0] != '.' && target_path_parts[0] != '..'
+      target_path_parts.shift if target_path_parts[0] == '.'
+
+      source_path_parts = source_module_id.split(/\//)
+      source_path_parts.pop
+      while target_path_parts.length > 0 && target_path_parts[0] == '..'
+        target_path_parts.pop
+        source_path_parts.pop if source_path_parts.length > 0
+      end
+      parts = source_path_parts.concat(target_path_parts)
+      if parts.length == 0
+        return basename
+      end
+      parts.join('/') + '/' + basename
+    end
+
+    def self.remove_use_strict(code)
+      code.gsub(/['"]use strict['"];\n/m, '')
+    end
+
+    def self.escape_module_id(module_id)
+      '$__' + ERB::Util.url_encode(module_id.gsub(/^\.\//, '')).gsub(/%/, '') + '__'
     end
   end
 
