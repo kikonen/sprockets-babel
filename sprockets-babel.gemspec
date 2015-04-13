@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ['brad.chen@70ms.com']
   spec.summary       = %q{Sprockets 2.x plugin for Babel.}
   spec.description   = %q{Transpile ES6 files with Google Babel.}
-  #spec.homepage      = "https://github.com/gunpowderlabs/sprockets-traceur"
+  spec.homepage      = 'https://github.com/70mainstreet/sprockets-babel'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0")
