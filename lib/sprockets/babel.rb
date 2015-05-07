@@ -128,7 +128,7 @@ module Sprockets
     end
 
     def self.escape_module_id(module_id)
-      '$__' + ERB::Util.url_encode(module_id.gsub(/^\.\//, '')).gsub(/%/, '') + '__'
+      '$__' + ERB::Util.url_encode(module_id.gsub(/^\.\//, '')).gsub(/%|-/, '') + '__'
     end
   end
 
