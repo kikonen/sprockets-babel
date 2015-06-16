@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = Sprockets::Babel::VERSION
   spec.authors       = ['Brad Chen']
   spec.email         = ['brad.chen@70ms.com']
-  spec.summary       = %q{Sprockets 2.x plugin for Babel.}
-  spec.description   = %q{Transpile ES6 files with Google Babel.}
+  spec.summary       = %q{Sprockets 2.x plugin for BabelJS.}
+  spec.description   = %q{Transpile ES6 files with BabelJS.}
   spec.homepage      = 'https://github.com/70mainstreet/sprockets-babel'
   spec.license       = 'MIT'
 
