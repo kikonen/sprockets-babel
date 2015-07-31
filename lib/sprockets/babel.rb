@@ -100,7 +100,7 @@ module Sprockets
         "'use strict';\n" +
         stripped + "\n" +
         'return (typeof module.exports === \'undefined\') ? exports : module.exports;' +
-        "})();\n" + trailing_text
+        "})();\n" + trailing_text + "\n"
     end
 
     def self.resolve_relative_module_id(source_module_id, target_module_id)
@@ -111,9 +111,9 @@ module Sprockets
       target_path_parts.shift if target_path_parts[0] == '.'
 
       source_path_parts = source_module_id.split(/\//)
-      source_path_parts.pop
+      source_path_parts.pop # ignore filename part
       while target_path_parts.length > 0 && target_path_parts[0] == '..'
-        target_path_parts.pop
+        target_path_parts.shift
         source_path_parts.pop if source_path_parts.length > 0
       end
       parts = source_path_parts.concat(target_path_parts)
