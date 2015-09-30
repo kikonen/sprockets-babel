@@ -3,6 +3,8 @@ require 'babel'
 require 'sprockets'
 require 'pathname'
 require 'erb'
+require 'v8'
+require 'logger'
 
 module Sprockets
   module Babel
@@ -21,13 +23,14 @@ module Sprockets
 
       def evaluate(scope, locals, &block)
         source_root = get_source_root(scope)
-        Babel.transform(data, {
+        babel_options = {
           modules: 'inline',
           moduleIds: true,
           moduleId: get_module_name(source_root),
           filename: file,
           filenameRelative: get_filename_relative(source_root)
-        }.merge(options.merge(::Babel.options)))['code']
+        }.merge(options.merge(::Babel.options))
+        Babel.transform(data, babel_options)['code']
       end
 
       private
@@ -57,9 +60,28 @@ module Sprockets
       end
     end
 
+    class Console
+      def initialize
+        @logger = Logger.new(STDOUT)
+      end
+
+      def log(message)
+        @logger.info "Sprockets Babel Log: #{message}"
+      end
+
+      def warn(message)
+        @logger.warn "Sprockets Babel Warning: #{message}"
+      end
+
+      def error(message)
+        @logger.warn "Sprockets Babel Error: #{message}"
+      end
+    end
+
     def self.transform(code, options = {})
       modules = options[:modules] || 'inline'
-      result = ::Babel::Transpiler.context.call('babel.transform', code, options.merge(
+      babel_transform = context[:babel][:transform]
+      result = babel_transform.call(code, options.merge(
         'ast' => false,
         'modules' => modules == 'inline' ? 'amd' : modules
       ))
@@ -69,10 +91,19 @@ module Sprockets
       result
     end
 
+    def self.context
+      @context ||= begin
+        ctx = V8::Context.new
+        ctx.eval('var self = this; ' + File.read(::Babel::Transpiler.script_path))
+        ctx['console'] = Console.new
+        ctx
+      end
+    end
+
     private
 
     def self.transform_inline(code, options)
-      result = remove_use_strict(code).gsub(/\Adefine\((.+?), function \(([^)]+)\) \{\n/m) do
+      result = remove_use_strict(code).sub(/\Adefine\((.+?), function \(([^)]+)\) \{\n/m) do
         raw_import_names = Regexp.last_match[1]
         raw_import_vars = Regexp.last_match[2]
         import_names = raw_import_names.gsub(/['"\[\]]/, '').split(', ')
@@ -88,19 +119,48 @@ module Sprockets
       end
 
       # deal with trailing stuff (such as source maps)
-      index = result.rindex(/\}\);/)
-      stripped = result
-      trailing_text = ''
-      unless index.nil?
-        stripped = result[0..index - 1]
-        trailing_text = result[(index + 3)..-1]
-      end
+      index = find_closing_brace result
+      stripped = result[0..index - 4] # - 4 to remove the closing });
+      trailing_text = result[index..-1]
 
       'var ' + escape_module_id(options[:moduleId]) + " = (function() {\n" +
         "'use strict';\n" +
         stripped + "\n" +
         'return (typeof module.exports === \'undefined\') ? exports : module.exports;' +
         "})();\n" + trailing_text + "\n"
+    end
+
+    # Detect the closing });
+    def self.find_closing_brace(code)
+      curr = code.length - 1
+      last_line_break = curr
+      line_comment = false
+      block_comment = false
+      while curr > 0
+        if code[curr] == "\n"
+          if line_comment
+            last_line_break = curr
+            line_comment = false
+          elsif !block_comment
+            # first line without a comment found
+            return last_line_break
+          end
+        end
+
+        if code[curr - 1, 2] == '//'
+          line_comment = true
+        end
+        if code[curr - 1, 2] == '*/'
+          block_comment = true
+        end
+        if code[curr - 1, 2] == '/*'
+          line_comment = true
+          block_comment = false
+          last_line_break = curr - 2
+        end
+        curr -= 1
+      end
+      last_line_break
     end
 
     def self.resolve_relative_module_id(source_module_id, target_module_id)
