@@ -103,64 +103,60 @@ module Sprockets
     private
 
     def self.transform_inline(code, options)
-      result = remove_use_strict(code).sub(/\Adefine\((.+?), function \(([^)]+)\) \{\n/m) do
-        raw_import_names = Regexp.last_match[1]
-        raw_import_vars = Regexp.last_match[2]
-        import_names = raw_import_names.gsub(/['"\[\]]/, '').split(', ')
-        import_vars = raw_import_vars.split(', ')
-        import_statements = ''
-        import_names.each_with_index { |item, i|
-          next if i == 0
-          next if item == 'exports' || item == 'module'
-          import_module_id = escape_module_id(resolve_relative_module_id(options[:moduleId], item))
-          import_statements += 'var ' + import_vars[i - 1] + ' = ' + import_module_id + ';'
+      prefix = <<-JS
+        var #{escape_module_id(options[:moduleId])} = (function() {
+          var exports = {};
+          var define = function(moduleId, importIds, body) {
+            var resolveRelativeModuleId = function(targetId) {
+              var targetParts = targetId.split(/\\//),
+                basename = targetParts.pop();
+              if ((targetParts.length == 0) || (targetParts[0] != '.' && targetParts[0] != '..')) {
+                return targetId;
+              }
+              if (targetParts[0] == '.') {
+                targetParts.shift();
+              }
+
+              var fromParts = moduleId.split(/\\//);
+              fromParts.pop();
+              while (targetParts.length > 0 && targetParts[0] == '..') {
+                targetParts.shift();
+                if (fromParts.length > 0) {
+                  fromParts.pop();
+                }
+              }
+              var parts = fromParts.concat(targetParts);
+              return (parts.length == 0) ? basename : parts.join('/') + '/' + basename;
+            };
+
+            importIds.shift();
+            var imports = [exports],
+              module = {exports: null};
+            for (var i = 0; i < importIds.length; i++) {
+              if (importIds[i] == 'module') {
+                imports.push(module);
+                continue;
+              }
+
+              var importId = resolveRelativeModuleId(importIds[i]),
+                variable = '$__' + encodeURIComponent(importId.replace(/^\\.\\//, ''))
+                  .replace(/%|-/, '') + '__';
+              imports.push((typeof window === 'undefined') ? global[variable] : window[variable]);
+            }
+            body.apply(undefined, imports);
+            if (module.exports != null) {
+              exports = module.exports;
+            }
+          };
+      JS
+      suffix = <<-JS
+          return exports;
+        })();
+        if ((typeof window === 'undefined') && (typeof global !== 'undefined')) {
+          global.#{escape_module_id(options[:moduleId])} = #{escape_module_id(options[:moduleId])};
         }
-        "var exports = {}, module = {};\n" + import_statements
-      end
-
-      # deal with trailing stuff (such as source maps)
-      index = find_closing_brace result
-      stripped = result[0..index - 4] # - 4 to remove the closing });
-      trailing_text = result[index..-1]
-
-      'var ' + escape_module_id(options[:moduleId]) + " = (function() {\n" +
-        "'use strict';\n" +
-        stripped + "\n" +
-        'return (typeof module.exports === \'undefined\') ? exports : module.exports;' +
-        "})();\n" + trailing_text + "\n"
-    end
-
-    # Detect the closing });
-    def self.find_closing_brace(code)
-      curr = code.length - 1
-      last_line_break = curr
-      line_comment = false
-      block_comment = false
-      while curr > 0
-        if code[curr] == "\n"
-          if line_comment
-            last_line_break = curr
-            line_comment = false
-          elsif !block_comment
-            # first line without a comment found
-            return last_line_break
-          end
-        end
-
-        if code[curr - 1, 2] == '//'
-          line_comment = true
-        end
-        if code[curr - 1, 2] == '*/'
-          block_comment = true
-        end
-        if code[curr - 1, 2] == '/*'
-          line_comment = true
-          block_comment = false
-          last_line_break = curr - 2
-        end
-        curr -= 1
-      end
-      last_line_break
+      JS
+      prefix + "\n" + code + "\n" + suffix
     end
 
     def self.resolve_relative_module_id(source_module_id, target_module_id)
@@ -181,10 +177,6 @@ module Sprockets
         return basename
       end
       parts.join('/') + '/' + basename
-    end
-
-    def self.remove_use_strict(code)
-      code.gsub(/['"]use strict['"];\n/m, '')
     end
 
     def self.escape_module_id(module_id)

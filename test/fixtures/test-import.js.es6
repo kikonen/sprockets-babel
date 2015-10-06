@@ -1,3 +1,5 @@
-import SomeUtils from './lib/SomeUtils';
+import Imported1 from './lib/Imported1';
+import {Imported2} from './lib/Imported2';
 
-print(SomeUtils.foo());
+print(Imported1.foo());
+print(Imported2.bar());

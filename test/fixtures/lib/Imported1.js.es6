@@ -1,4 +1,4 @@
-export default class SomeUtils {
+export default class Imported1 {
 
   static foo() {
     return 'foo';

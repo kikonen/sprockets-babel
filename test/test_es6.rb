@@ -40,17 +40,34 @@ class TestES6 < MiniTest::Test
   end
 
   def test_import_export
+    ctx = TestES6.create_test_import_context
+    ctx.eval TestES6.compile_js_source 'test/fixtures/test-import.js.es6', 'inline'
+    assert_equal 'foobar', ctx[:output]
+  end
+
+  def test_relative_import
+    ctx = TestES6.create_test_import_context
+    ctx.eval TestES6.compile_js_source 'test/fixtures/lib2/test-relative-import.js.es6', 'inline',
+      'lib2/test-relative-import'
+    assert_equal 'foobar', ctx[:output]
+  end
+
+  private
+
+  def self.create_test_import_context
     ctx = TestES6.create_js_context <<-JS
       var output = '', print = function(data) { output += data};
     JS
-    ctx.eval TestES6.compile_js_source 'test/fixtures/lib/SomeUtils.js.es6', 'inline',
-      'lib/SomeUtils'
-    ctx.eval TestES6.compile_js_source 'test/fixtures/test-import.js.es6', 'inline'
-    assert_equal 'foo', ctx[:output]
+    ctx.eval TestES6.compile_js_source 'test/fixtures/lib/Imported1.js.es6', 'inline',
+      'lib/Imported1'
+    ctx.eval TestES6.compile_js_source 'test/fixtures/lib/Imported2.js.es6', 'inline',
+      'lib/Imported2'
+    ctx
   end
 
   def self.create_js_context(code)
     ctx = V8::Context.new
+    ctx.eval('var global = {};')
     ctx.eval(code)
     ctx
   end
