@@ -103,9 +103,13 @@ module Sprockets
     private
 
     def self.transform_inline(code, options)
+      module_var = '$__' + ERB::Util.url_encode(options[:moduleId].gsub(/^\.\//, ''))
+        .gsub(/%|-/, '') + '__'
       prefix = <<-JS
-        var #{escape_module_id(options[:moduleId])} = (function() {
+        (function(global) {
           var exports = {};
+          global.#{module_var} = exports;
+
           var define = function(moduleId, importIds, body) {
             var resolveRelativeModuleId = function(targetId) {
               var targetParts = targetId.split(/\\//),
@@ -141,20 +145,19 @@ module Sprockets
               var importId = resolveRelativeModuleId(importIds[i]),
                 variable = '$__' + encodeURIComponent(importId.replace(/^\\.\\//, ''))
                   .replace(/%|-/, '') + '__';
-              imports.push((typeof window === 'undefined') ? global[variable] : window[variable]);
+              imports.push(global[variable]);
             }
-            body.apply(undefined, imports);
+            body.apply(global, imports);
             if (module.exports != null) {
-              exports = module.exports;
+              global.#{module_var} = module.exports;
             }
           };
       JS
+
+      # code transpiled by babel is inserted here
+
       suffix = <<-JS
-          return exports;
-        })();
-        if ((typeof window === 'undefined') && (typeof global !== 'undefined')) {
-          global.#{escape_module_id(options[:moduleId])} = #{escape_module_id(options[:moduleId])};
-        }
+        })(this);
       JS
       prefix + "\n" + code + "\n" + suffix
     end
@@ -177,10 +180,6 @@ module Sprockets
         return basename
       end
       parts.join('/') + '/' + basename
-    end
-
-    def self.escape_module_id(module_id)
-      '$__' + ERB::Util.url_encode(module_id.gsub(/^\.\//, '')).gsub(/%|-/, '') + '__'
     end
   end
 

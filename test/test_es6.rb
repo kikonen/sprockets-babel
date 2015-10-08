@@ -52,23 +52,41 @@ class TestES6 < MiniTest::Test
     assert_equal 'foobar', ctx[:output]
   end
 
+  def test_js_inline_module_loader
+    ctx = TestES6.create_inline_module_loader_context
+    ctx.eval TestES6.compile_js_source 'test/fixtures/test-import.js.es6', 'inline'
+    assert_equal 'foobar', ctx[:output]
+  end
+
+  def test_js_inline_module_loader_relative_import
+    ctx = TestES6.create_inline_module_loader_context
+    ctx.eval TestES6.compile_js_source 'test/fixtures/lib2/test-relative-import.js.es6', 'inline',
+            'lib2/test-relative-import'
+    assert_equal 'foobar', ctx[:output]
+  end
+
   private
 
-  def self.create_test_import_context
-    ctx = TestES6.create_js_context <<-JS
+  def self.create_inline_module_loader_context
+    inline_module_loader = File.read('lib/sprockets-babel-inline-module-loader.js')
+    TestES6.create_test_import_context inline_module_loader, 'amd'
+  end
+
+  def self.create_test_import_context(code = nil, module_format = 'inline')
+    ctx = TestES6.create_js_context code
+    ctx.eval <<-JS
       var output = '', print = function(data) { output += data};
     JS
-    ctx.eval TestES6.compile_js_source 'test/fixtures/lib/Imported1.js.es6', 'inline',
+    ctx.eval TestES6.compile_js_source 'test/fixtures/lib/Imported1.js.es6', module_format,
       'lib/Imported1'
-    ctx.eval TestES6.compile_js_source 'test/fixtures/lib/Imported2.js.es6', 'inline',
+    ctx.eval TestES6.compile_js_source 'test/fixtures/lib/Imported2.js.es6', module_format,
       'lib/Imported2'
     ctx
   end
 
-  def self.create_js_context(code)
+  def self.create_js_context(code = nil)
     ctx = V8::Context.new
-    ctx.eval('var global = {};')
-    ctx.eval(code)
+    ctx.eval(code) unless code.nil?
     ctx
   end
 
