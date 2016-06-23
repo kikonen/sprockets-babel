@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'sprockets', '~> 2'
   spec.add_dependency 'babel-transpiler', '>= 0.7.0'
-  spec.add_dependency 'therubyracer', '>= 0.12.2'
+#  spec.add_dependency 'therubyracer', '>= 0.12.2'
 
   spec.add_development_dependency 'rake'
   spec.add_development_dependency 'minitest'
