@@ -3,7 +3,7 @@ require 'babel'
 require 'sprockets'
 require 'pathname'
 require 'erb'
-require 'v8'
+#require 'v8'
 require 'logger'
 
 module Sprockets
@@ -80,11 +80,26 @@ module Sprockets
 
     def self.transform(code, options = {})
       modules = options[:modules] || 'inline'
-      babel_transform = context[:babel][:transform]
-      result = babel_transform.call(code, options.merge(
-        'ast' => false,
-        'modules' => modules == 'inline' ? 'amd' : modules
-      ))
+
+      if defined? V8
+        babel_transform = context[:babel][:transform]
+        result = babel_transform.call(
+          code,
+          options.merge(
+            'ast' => false,
+            'modules' => modules == 'inline' ? 'amd' : modules
+          ))
+      else
+        result = context.call(
+          'babel.transform',
+          code,
+          options.merge(
+            'ast' => false,
+            'modules' => modules == 'inline' ? 'amd' : modules
+          ))
+      end
+
+
       if modules == 'inline'
         result['code'] = transform_inline(result['code'], options)
       end
@@ -93,10 +108,21 @@ module Sprockets
 
     def self.context
       @context ||= begin
-        ctx = V8::Context.new
-        ctx.eval('var self = this; ' + File.read(::Babel::Transpiler.script_path))
-        ctx['console'] = Console.new
-        ctx
+        if defined? V8
+          ctx = V8::Context.new
+          ctx.eval('var self = this; ' + File.read(::Babel::Transpiler.script_path))
+          ctx['console'] = Console.new
+          ctx
+        else
+          # assume mini-racer
+#          ctx = MiniRacer::Context.new
+#          ctx.eval()
+#          ctx.attach('console', Console.new)
+
+          src = 'var self = this; ' + File.read(::Babel::Transpiler.script_path)
+          ctx = ExecJS.compile(src)
+         # ctx.attach('console', Console.new)
+        end
       end
     end
 
