@@ -8,6 +8,12 @@ This is intended as a temporary solution until Sprockets 2.x can be upgraded.
 
 ## Background
 
+NOTE KI
+
+Created to allow support for miniracer, and to fix some minor logic bugs
+
+Original: [sprockets-babel](70mainstreet/sprockets-babel)
+
 I created this gem for the following reasons:
 
 * I need Babel for IE 8 support, but
