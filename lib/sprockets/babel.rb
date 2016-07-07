@@ -169,8 +169,8 @@ module Sprockets
               }
 
               var importId = resolveRelativeModuleId(importIds[i]),
-                variable = '$__' + encodeURIComponent(importId.replace(/^\\.\\//, ''))
-                  .replace(/%|-/, '') + '__';
+                variable = '$__' + encodeURIComponent(importId.replace(/^\\.\\//g, ''))
+                  .replace(/%|-/g, '') + '__';
               imports.push(global[variable]);
             }
             body.apply(global, imports);
