@@ -6,11 +6,11 @@ require 'sprockets/babel/version'
 Gem::Specification.new do |spec|
   spec.name          = 'sprockets-babel-miniracer'
   spec.version       = Sprockets::Babel::VERSION
-  spec.authors       = ['Brad Chen']
-  spec.email         = ['brad.chen@70ms.com']
+  spec.authors       = ['Kari Ikonen']
+  spec.email         = ['mr.kari.ikonen@gmail.com']
   spec.summary       = %q{Sprockets 2.x plugin for BabelJS.}
   spec.description   = %q{Transpile ES6 files with BabelJS.}
-  spec.homepage      = 'https://github.com/70mainstreet/sprockets-babel'
+  spec.homepage      = 'https://github.com/kikonen/sprockets-babel-miniracer'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0")
