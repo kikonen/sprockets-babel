@@ -136,8 +136,8 @@ module Sprockets
           var exports = {};
           global.#{module_var} = exports;
 
-          var define = function(moduleId, importIds, body) {
-            var resolveRelativeModuleId = function(targetId) {
+          function define(moduleId, importIds, body) {
+            function resolveRelativeModuleId(targetId) {
               var targetParts = targetId.split(/\\//),
                 basename = targetParts.pop();
               if ((targetParts.length == 0) || (targetParts[0] != '.' && targetParts[0] != '..')) {
@@ -169,7 +169,7 @@ module Sprockets
               }
 
               var importId = resolveRelativeModuleId(importIds[i]),
-                variable = '$__' + encodeURIComponent(importId.replace(/^\\.\\//g, ''))
+                variable = '$__' + encodeURIComponent(importId.replace(/^\\.\\//, ''))
                   .replace(/%|-/g, '') + '__';
               imports.push(global[variable]);
             }
