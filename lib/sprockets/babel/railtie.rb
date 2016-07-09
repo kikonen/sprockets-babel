@@ -8,10 +8,6 @@ module Sprockets
         register_asset_paths(app)
       end
 
-      rake_tasks do
-        Base.load_tasks
-      end
-
       private
 
       def register_asset_paths(app)
