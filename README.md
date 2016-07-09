@@ -6,6 +6,26 @@ the ES6 transpiler in a Sprockets 2.x environment.
 
 This is intended as a temporary solution until Sprockets 2.x can be upgraded.
 
+## Usage
+
+Default module defie logic is to use "inline". However, that generates extra boilerplate on every file,
+which accumulates to be plenty with lot fo files.
+
+Using 'amd' allows to reduce boilerplate, but requires including "define.js" before es6 files in manifest.
+
+config/initializers/babel.rb
+```
+Babel.options do |opt|
+  opt[:modules] = 'amd'
+end
+```
+
+app/assets/javascripts/application.js
+```
+//= require sprockets-babel-miniracer/define
+```
+
+
 ## Background
 
 NOTE KI
