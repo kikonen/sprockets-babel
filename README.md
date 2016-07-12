@@ -8,8 +8,11 @@ This is intended as a temporary solution until Sprockets 2.x can be upgraded.
 
 ## Usage
 
-Default module defie logic is to use "inline". However, that generates extra boilerplate on every file,
+### Inline
+Default module define logic is to use "inline". However, that generates extra boilerplate on every file,
 which accumulates to be plenty with lot fo files.
+
+### AMD
 
 Using 'amd' allows to reduce boilerplate, but requires including "define.js" before es6 files in manifest.
 
@@ -23,6 +26,25 @@ end
 app/assets/javascripts/application.js
 ```
 //= require sprockets-babel-miniracer/define
+```
+
+### SystemJS
+
+Recommended appraoch is to use systemjs instead of AMD. This provides more comprehensive logic for
+setting up environment.
+
+config/initializers/babel.rb
+```
+Babel.options do |opt|
+  opt[:modules] = 'system'
+end
+```
+
+app/assets/javascripts/application.js
+```
+// NOTE KI assuming that systemjs is included somehow into vendor assets
+//= require system.js-0.19.31/system-polyfills.src
+//= require system.js-0.19.31/system.src
 ```
 
 
