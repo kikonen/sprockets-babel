@@ -209,5 +209,5 @@ module Sprockets
     end
   end
 
-  register_engine '.es6', Babel::Template
+  register_engine '.es6', Babel::Template, mime_type: 'application/javascript', silence_deprecation: true
 end
