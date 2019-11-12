@@ -209,5 +209,11 @@ module Sprockets
     end
   end
 
-  register_engine '.es6', Babel::Template, mime_type: 'application/javascript', silence_deprecation: true
+  # NOTE KI https://github.com/appjudo/skim/issues/55
+  if Sprockets.respond_to?(:register_engine)
+    register_engine '.es6', Babel::Template, mime_type: 'application/javascript', silence_deprecation: true
+  else
+    Sprockets.register_mime_type 'text/es6', extensions: ['.es6', '.mjs']
+    Sprockets.register_transformer 'text/es6', 'application/javascript', Babel::Template
+  end
 end
